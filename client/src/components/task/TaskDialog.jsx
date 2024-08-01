@@ -164,32 +164,62 @@ import { AiTwotoneFolderOpen } from "react-icons/ai";
 import { BsThreeDots } from "react-icons/bs";
 import { HiDuplicate } from "react-icons/hi";
 import { MdAdd, MdOutlineEdit } from "react-icons/md";
-import { RiDeleteBin6Line } from "react-icons/ri";
+import { RiDeleteBin6Line, RiUserUnfollowFill } from "react-icons/ri";
 import { Menu, Transition } from "@headlessui/react";
 import AddTask from "./AddTask";
 import AddSubTask from "./AddSubTask";
 import ConfirmatioDialog from "../Dialogs";
-import { useTrashTaskMutation } from "../../redux/slices/taskApiSlice";
+import { useLeavTaskMutation, useTrashTaskMutation } from "../../redux/slices/taskApiSlice";
 import { toast } from "sonner";
+import { useSelector } from "react-redux";
 
 const TaskDialog = ({ task }) => {
   const [open, setOpen] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
+  const [leaveDialog, setleaveDialog] = useState(false);
   const navigate = useNavigate();
   const [deleteTask] = useTrashTaskMutation();
-
-  const duplicateHandler = () => {
-    // Implement duplicate task logic here
-  };
+  const [leaveTask] = useLeavTaskMutation();
+  const { user } = useSelector((state) => state.auth);
+  
+  const msg ='Are you sure you want to Leave?';
+  const type ='leave';
+  
 
   const deleteClicks = () => {
-    setOpenDialog(true);
+    console.log();
+    if (user._id === task?.createdBy) {
+      setOpenDialog(true);
+    } else {
+      toast.error("You do not have permission to delete this task.");
+    }
+    
+  };
+
+  const leaveClicks = () => {
+  
+   setleaveDialog(true);
+    
   };
 
   const deleteHandler = async () => {
     try {
       const res = await deleteTask({ id: task?._id }).unwrap();
+      toast.success(res?.message);
+      setTimeout(() => {
+        setOpenDialog(false);
+        window.location.reload();
+      }, 500);
+    } catch (error) {
+      toast.error(error?.data?.message || error.error);
+    }
+  };
+
+  const leaveHandler = async () => {
+    try {
+      console.log(task?._id)
+      const res = await leaveTask({ id:task?._id}).unwrap();
       toast.success(res?.message);
       setTimeout(() => {
         setOpenDialog(false);
@@ -211,16 +241,8 @@ const TaskDialog = ({ task }) => {
       icon: <MdOutlineEdit className='mr-2 h-5 w-5' aria-hidden='true' />,
       onClick: () => setOpenEdit(true),
     },
-    {
-      label: "Add Sub-Task",
-      icon: <MdAdd className='mr-2 h-5 w-5' aria-hidden='true' />,
-      onClick: () => setOpen(true),
-    },
-    {
-      label: "Duplicate",
-      icon: <HiDuplicate className='mr-2 h-5 w-5' aria-hidden='true' />,
-      onClick: () => duplicateHandler(),
-    },
+    
+  
   ];
 
   return (
@@ -277,6 +299,25 @@ const TaskDialog = ({ task }) => {
                   )}
                 </Menu.Item>
               </div>
+
+              <div className='px-1 py-1'>
+                <Menu.Item>
+                  {({ active }) => (
+                    <button
+                      onClick={() => leaveClicks()}
+                      className={`${
+                        active ? "bg-blue-500 text-white" : "text-red-900"
+                      } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                    >
+                      <RiUserUnfollowFill
+                        className='mr-2 h-5 w-5 text-red-400'
+                        aria-hidden='true'
+                      />
+                      Leave
+                    </button>
+                  )}
+                </Menu.Item>
+              </div>
             </Menu.Items>
           </Transition>
         </Menu>
@@ -295,6 +336,13 @@ const TaskDialog = ({ task }) => {
         open={openDialog}
         setOpen={setOpenDialog}
         onClick={deleteHandler}
+      />
+      <ConfirmatioDialog
+        open={leaveDialog}
+        msg={msg}
+        type={type}
+        setOpen={setleaveDialog}
+        onClick={leaveHandler}
       />
     </>
   );

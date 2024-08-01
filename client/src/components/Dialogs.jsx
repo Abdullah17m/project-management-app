@@ -89,6 +89,18 @@ export default function ConfirmationDialog({
     setOpen(false);
   };
 
+  const getButtonLabel = () => {
+    switch (type) {
+      case "restore":
+        return "Restore";
+      case "restoreAll":
+        return "Restore All";
+      case "leave":
+        return "Leave";
+      default:
+        return "Delete";
+    }
+  };
   return (
     <>
       <ModelWrapper open={open} setOpen={closeDialog}>
@@ -120,9 +132,10 @@ export default function ConfirmationDialog({
                   : "bg-red-600 hover:bg-red-500"
               )}
               onClick={onClick}
-              label={
-                type === "restore" || type === "restoreAll" ? "Restore" : "Delete"
-              }
+              // label={
+              //   type === "restore" || type === "restoreAll" ? "Restore" : "Delete"
+              // }
+              label={getButtonLabel()}
             />
 
             <Button

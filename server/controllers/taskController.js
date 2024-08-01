@@ -33,6 +33,7 @@ export const createTask = async (req, res) => {
       priority: priority.toLowerCase(),
       assets,
       activities: activity,
+      createdBy: userId
     });
 
     await Notice.create({
@@ -126,10 +127,11 @@ export const postTaskActivity = async (req, res) => {
 export const dashboardStatistics = async (req, res) => {
   try {
     const { userId, isAdmin } = req.user;
-
+    console.log(req.user);
     const allTasks = isAdmin
       ? await Task.find({
           isTrashed: false,
+          team: { $all: [userId] }
         })
           .populate({
             path: "team",
@@ -200,7 +202,7 @@ export const getTasks = async (req, res) => {
   try {
     const { stage, id } = req.params;
     const { isTrashed } = req.query; // Fetch the query parameter
-
+    const { userId } = req.user;
     let query = {};
 
     if (stage && stage !== 'trashed') {
@@ -211,7 +213,9 @@ export const getTasks = async (req, res) => {
     
     // Set the isTrashed flag based on the stage or query parameter
     query.isTrashed = stage === 'trashed' || isTrashed === 'true';
-
+    if(query.isTrashed){
+      query.createdBy = userId;
+    }
     console.log("Query:", query);
 
     const tasks = await Task.find(query)
@@ -373,16 +377,60 @@ export const trashTask = async (req, res) => {
     return res.status(400).json({ status: false, message: error.message });
   }
 };
+export const leaveTask = async (req,res) => {
+  const { id } = req.params;
+  const { userId } = req.user;
+ 
+  try {
+    const task = await Task.findById(id);
+    console.log(task);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
 
+    // Check if the user is in the team
+    const userIndex = task.team.indexOf(userId);
+    if (userIndex === -1) {
+      return res.status(403).json({ message: 'You are not part of this task' });
+    }
+
+    // Prevent the last remaining user from leaving the task
+    if (task.team.length === 1 && task.team[0].equals(userId)) {
+      return res.status(403).json({ message: 'You cannot leave the task as the last remaining member' });
+    }
+
+    // Remove the user from the team
+    task.team.splice(userIndex, 1);
+
+    // Check if the user is the creator
+    if (task.createdBy.equals(userId)) {
+      if (task.team.length > 0) {
+        // Assign a new creator from the remaining team members
+        task.createdBy = task.team[0];
+      } else {
+        // If no team members are left, set createdBy to null
+        task.createdBy = null;
+      }
+    }
+
+    await task.save();
+
+    res.json({ message: 'You have left the task successfully', task });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+}
 export const deleteRestoreTask = async (req, res) => {
   try {
     const { id } = req.params;
     const { actionType } = req.query;
+    const {userId} = req.user;
     console.log(actionType);
     if (actionType === "delete") {
       await Task.findByIdAndDelete(id);
     } else if (actionType === "deleteAll") {
-      await Task.deleteMany({ isTrashed: true });
+      await Task.deleteMany({ isTrashed: true, createdBy:userId });
     } else if (actionType === "restore") {
       const resp = await Task.findById(id);
 
@@ -390,7 +438,7 @@ export const deleteRestoreTask = async (req, res) => {
       resp.save();
     } else if (actionType === "restoreAll") {
       await Task.updateMany(
-        { isTrashed: true },
+        { isTrashed: true ,createdBy:userId},
         { $set: { isTrashed: false } }
       );
     }

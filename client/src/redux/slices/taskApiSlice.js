@@ -105,6 +105,13 @@ export const taskApiSlice = apiSlice.injectEndpoints({
         credentials: "include",
       })
     }),
+    leavTask: builder.mutation({
+      query: ({ id }) => ({
+        url: `/task/leave/${id}`,
+        method:'DELETE',
+        credentials: "include",
+      })
+    })
     // getTrashTasks: builder.query({
     //   query: ({id}) => ({
     //     url: `/task/trashed/${id}`, // Adjust URL based on presence of stage
@@ -127,5 +134,6 @@ export const {
   useCreateSubTaskMutation,
   usePostTaskActivityMutation,
   useDeleteRestoreTaskMutation,
+  useLeavTaskMutation
   // useGetTrashTasksQuery
 } = taskApiSlice;

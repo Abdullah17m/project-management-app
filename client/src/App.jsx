@@ -14,6 +14,7 @@ import Trash from "./pages/Trash";
 import Users from "./pages/Users";
 import Dashboard from "./pages/Dashboard";
 import { setOpenSidebar } from "./redux/slices/authSlice";
+import Register from "./pages/Register";
 
 function Layout() {
   const { user } = useSelector((state) => state.auth);;
@@ -109,6 +110,7 @@ function App() {
           </Route>
 
           <Route path='/login' element={<Login />} />
+          <Route path='/register' element={<Register />} />
         </Routes>
         <Toaster richColors />
       </main>
